@@ -9,10 +9,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.study.querydsl.Entity.QTeam;
+import com.study.querydsl.Entity.dto.MemberDto;
+import com.study.querydsl.Entity.dto.UserDto;
 import java.util.*;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.study.querydsl.Entity.Member;
@@ -284,6 +288,7 @@ public class QuerydslBasicTest {
 
     @PersistenceUnit
     EntityManagerFactory emf;
+
     @Test
     public void fetchJoinNo() throws Exception {
         em.flush();
@@ -296,6 +301,7 @@ public class QuerydslBasicTest {
                 emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
 //        assertThat(loaded), is.isFalse();
     }
+
     @Test
     public void fetchJoinUse() throws Exception {
         em.flush();
@@ -322,7 +328,7 @@ public class QuerydslBasicTest {
                         JPAExpressions
                                 .select(memberSub.age.max())
                                 .from(memberSub)
-                )) .fetch();
+                )).fetch();
 //        assertThat(result).extracting("age")
 //                .containsExactly(40);
     }
@@ -336,7 +342,7 @@ public class QuerydslBasicTest {
                         JPAExpressions
                                 .select(memberSub.age.avg())
                                 .from(memberSub)
-                )) .fetch();
+                )).fetch();
 //        assertThat(result).extracting("age")
 //                .containsExactly(30,40);
     }
@@ -354,10 +360,11 @@ public class QuerydslBasicTest {
                                 .select(memberSub.age)
                                 .from(memberSub)
                                 .where(memberSub.age.gt(10))
-                )) .fetch();
+                )).fetch();
 //        assertThat(result).extracting("age")
 //                .containsExactly(20, 30, 40);
     }
+
     @Test
     public void selectSubQuery() throws Exception {
         QMember memberSub = new QMember("memberSub");
@@ -380,13 +387,14 @@ public class QuerydslBasicTest {
     public void baseCase() {
         List<String> result = queryFactory
                 .select(member.age
-                        .when(10).then("열살") .when(20).then("스무살") .otherwise("기타"))
+                        .when(10).then("열살").when(20).then("스무살").otherwise("기타"))
                 .from(member)
                 .fetch();
 
         List<String> complexResult = queryFactory
                 .select(new CaseBuilder()
-                        .when(member.age.between(0, 20)).then("0~20살") .when(member.age.between(21, 30)).then("21~30살") .otherwise("기타"))
+                        .when(member.age.between(0, 20)).then("0~20살")
+                        .when(member.age.between(21, 30)).then("21~30살").otherwise("기타"))
                 .from(member).fetch();
     }
 
@@ -429,6 +437,66 @@ public class QuerydslBasicTest {
         }
     }
 
+    @Test
+    public void findMemberDtoQuery() {
+        List<MemberDto> result = em.createQuery(
+                        "select new com.study.querydsl.Entity.dto.MemberDto(m.username, m.age) " +
+                                "from Member m", MemberDto.class)
+                .getResultList();
+    }
 
+    @Test
+    public void findDtoBySetter() {
+        List<MemberDto> result = queryFactory
+                .select(Projections.bean(MemberDto.class,
+                        member.username,
+                        member.age))
+                .from(member)
+                .fetch();
+    }
+
+    @Test
+    public void findDtoByField() {
+        List<MemberDto> result = queryFactory
+                .select(Projections.fields(MemberDto.class,
+                        member.username,
+                        member.age))
+                .from(member)
+                .fetch();
+    }
+
+    @Test
+    public void findDtoByConstructor() {
+        List<MemberDto> result = queryFactory
+                .select(Projections.constructor(MemberDto.class,
+                        member.username,
+                        member.age))
+                .from(member)
+                .fetch();
+    }
+
+    @Test
+    public void findUserDto() {
+        QMember memberSub = new QMember("memberSub");
+        List<UserDto> fetch = queryFactory
+                .select(Projections.fields(UserDto.class,
+                                member.username.as("name"),
+                        ExpressionUtils.as(
+                                JPAExpressions.select(memberSub.age.max())
+                                        .from(memberSub), "age")
+                        )
+                ).from(member)
+                .fetch();
+    }
+
+    @Test
+    public void findUserDtoByConstructor() {
+        QMember memberSub = new QMember("memberSub");
+        List<UserDto> fetch = queryFactory
+                .select(Projections.fields(UserDto.class,
+                                member.username, member.age))
+                .from(member)
+                .fetch();
+    }
 }
 
