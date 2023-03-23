@@ -109,7 +109,6 @@ public class QuerydslBasicTest {
                 .fetch();
         assertThat(result1.size(), is(equalTo(1)));
     }
-
     @Test
     public void resultFetch() {
         //List
@@ -157,6 +156,28 @@ public class QuerydslBasicTest {
         Member memberNull = result.get(2);
         assertThat(member5.getUsername(), is(equalTo("member5")));
         assertThat(member6.getUsername(), is(equalTo("member6")));
+    }
+    @Test
+    public void paging1() { // 조회 건수 제한
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc()) .offset(1) //0부터 시작(zero index) .limit(2) //최대 2건 조회
+                .fetch();
+        assertThat(result.size(), is(equalTo(2)));
+    }
+
+    @Test
+    public void paging2() {
+        QueryResults<Member> queryResults = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1)
+                .limit(2)
+                .fetchResults();
+        assertThat(queryResults.getTotal(), is(equalTo((4))));
+        assertThat(queryResults.getLimit(), is(equalTo((2))));
+        assertThat(queryResults.getOffset(), is(equalTo((1))));
+        assertThat(queryResults.getResults().size(), is(equalTo((2))));
     }
 }
 
