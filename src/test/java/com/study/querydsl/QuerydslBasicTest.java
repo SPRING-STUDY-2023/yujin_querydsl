@@ -1,12 +1,13 @@
 package com.study.querydsl;
 
-import static com.querydsl.core.types.ExpressionUtils.isNull;
 import static com.study.querydsl.Entity.QMember.member;
+import static com.study.querydsl.Entity.QTeam.team;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.querydsl.core.QueryResults;
+import com.querydsl.core.Tuple;
 import java.util.*;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.study.querydsl.Entity.Member;
@@ -15,7 +16,6 @@ import com.study.querydsl.Entity.Team;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.transaction.Transactional;
-import org.assertj.core.api.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -178,6 +178,49 @@ public class QuerydslBasicTest {
         assertThat(queryResults.getLimit(), is(equalTo((2))));
         assertThat(queryResults.getOffset(), is(equalTo((1))));
         assertThat(queryResults.getResults().size(), is(equalTo((2))));
+    }
+
+    /**
+     * JPQL
+     * select
+     * COUNT(m), //회원수
+     * SUM(m.age), //나이 합
+     * AVG(m.age), //평균 나이
+     * MAX(m.age), //최대 나이
+     * MIN(m.age) //최소 나이 * from Member m
+     */
+    @Test
+    public void aggregation() throws Exception {
+        List<Tuple> result = queryFactory
+                .select(member.count(),
+                        member.age.sum(),
+                        member.age.avg(),
+                        member.age.max(),
+                        member.age.min())
+                .from(member)
+                .fetch();
+        Tuple tuple = result.get(0);
+        assertThat(tuple.get(member.count()), is(equalTo(4)));
+        assertThat(tuple.get(member.age.sum()), is(equalTo((100))));
+        assertThat(tuple.get(member.age.avg()), is(equalTo(25)));
+        assertThat(tuple.get(member.age.max()), is(equalTo(40)));
+        assertThat(tuple.get(member.age.min()), is(equalTo(10)));
+    }
+
+    @Test
+    public void group() throws Exception {
+        List<Tuple> result = queryFactory
+                .select(team.name, member.age.avg())
+                .from(member)
+                .join(member.team, team)
+                .groupBy(team.name)
+                .fetch();
+        Tuple teamA = result.get(0);
+        Tuple teamB = result.get(1);
+        assertThat(teamA.get(team.name), is(equalTo(("teamA"))));
+        assertThat(teamA.get(member.age.avg()), is(equalTo(15)));
+        assertThat(teamB.get(team.name), is(equalTo("teamB")));
+        assertThat(teamB.get(member.age.avg()), is(equalTo((35))));
     }
 }
 
