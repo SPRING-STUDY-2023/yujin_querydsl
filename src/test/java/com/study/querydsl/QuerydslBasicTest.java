@@ -3,6 +3,7 @@ package com.study.querydsl;
 import static com.mysema.commons.lang.Assert.assertThat;
 import static com.study.querydsl.Entity.QMember.member;
 
+import java.util.*;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.study.querydsl.Entity.Member;
 import com.study.querydsl.Entity.QMember;
@@ -78,6 +79,24 @@ public class QuerydslBasicTest {
                 .fetchOne();
 //        assertThat(findMember.getUsername()).isEqualTo("member1");
     }
+    @Test
+    public void search() {
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1")
+                        .and(member.age.eq(10)))
+                .fetchOne();
+//        assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
 
+    @Test
+    public void searchAndParam() {
+        List<Member> result1 = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"),
+                        member.age.eq(10))
+                .fetch();
+//        assertThat(result1.size()).isEqualTo(1);
+    }
 }
 
