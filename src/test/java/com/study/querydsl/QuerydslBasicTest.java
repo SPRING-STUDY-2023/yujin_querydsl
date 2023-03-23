@@ -1,5 +1,6 @@
 package com.study.querydsl;
 
+import static com.querydsl.core.types.ExpressionUtils.as;
 import static com.study.querydsl.Entity.QMember.member;
 import static com.study.querydsl.Entity.QTeam.team;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -15,7 +16,9 @@ import com.study.querydsl.Entity.Member;
 import com.study.querydsl.Entity.QMember;
 import com.study.querydsl.Entity.Team;
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceUnit;
 import javax.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -274,6 +277,34 @@ public class QuerydslBasicTest {
         for (Tuple tuple : result) {
             System.out.println("t=" + tuple);
         }
+    }
+
+    @PersistenceUnit
+    EntityManagerFactory emf;
+    @Test
+    public void fetchJoinNo() throws Exception {
+        em.flush();
+        em.clear();
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+        boolean loaded =
+                emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+//        assertThat(loaded), is.isFalse();
+    }
+    @Test
+    public void fetchJoinUse() throws Exception {
+        em.flush();
+        em.clear();
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .join(member.team, team).fetchJoin()
+                .where(member.username.eq("member1"))
+                .fetchOne();
+        boolean loaded =
+                emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+//        assertThat(loaded).as("페치 조인 적용").isTrue();
     }
 }
 
