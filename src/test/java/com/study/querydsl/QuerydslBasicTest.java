@@ -16,6 +16,7 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.study.querydsl.Entity.QTeam;
 import com.study.querydsl.Entity.dto.MemberDto;
+import com.study.querydsl.Entity.dto.QMemberDto;
 import com.study.querydsl.Entity.dto.UserDto;
 import java.util.*;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -497,6 +498,15 @@ public class QuerydslBasicTest {
                                 member.username, member.age))
                 .from(member)
                 .fetch();
+    }
+
+    @Test
+    public void findDtoByQueryProjection() {
+        List<MemberDto> result = queryFactory
+                .select(new QMemberDto(member.username, member.age))
+                .from(member)
+                .fetch();
+
     }
 }
 
