@@ -8,6 +8,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.study.querydsl.Entity.QTeam;
 import java.util.*;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.study.querydsl.Entity.Member;
@@ -62,7 +63,7 @@ public class QuerydslBasicTest {
                 .from(m)
                 .where(m.username.eq("member1"))//파라미터 바인딩 처리
                 .fetchOne();
-        assertThat(findMember.getUsername(),is(equalTo("member1")));
+        assertThat(findMember.getUsername(), is(equalTo("member1")));
     }
 
     @Test
@@ -73,7 +74,7 @@ public class QuerydslBasicTest {
                 .from(m)
                 .where(m.username.eq("member1"))
                 .fetchOne();
-        assertThat(findMember.getUsername(),is(equalTo("member1")));
+        assertThat(findMember.getUsername(), is(equalTo("member1")));
     }
 
     @Test
@@ -87,7 +88,7 @@ public class QuerydslBasicTest {
                 .from(member)
                 .where(member.username.eq("member1"))
                 .fetchOne();
-        assertThat(findMember.getUsername(),is(equalTo("member1")));
+        assertThat(findMember.getUsername(), is(equalTo("member1")));
     }
 
     @Test
@@ -97,7 +98,7 @@ public class QuerydslBasicTest {
                 .where(member.username.eq("member1")
                         .and(member.age.eq(10)))
                 .fetchOne();
-        assertThat(findMember.getUsername(),is(equalTo("member1")));
+        assertThat(findMember.getUsername(), is(equalTo("member1")));
     }
 
     @Test
@@ -109,6 +110,7 @@ public class QuerydslBasicTest {
                 .fetch();
         assertThat(result1.size(), is(equalTo(1)));
     }
+
     @Test
     public void resultFetch() {
         //List
@@ -135,10 +137,7 @@ public class QuerydslBasicTest {
 
 
     /**
-     * 회원 정렬 순서
-     * 1. 회원 나이 내림차순(desc)
-     * 2. 회원 이름 올림차순(asc)
-     * 단 2에서 회원 이름이 없으면 마지막에 출력(nulls last)
+     * 회원 정렬 순서 1. 회원 나이 내림차순(desc) 2. 회원 이름 올림차순(asc) 단 2에서 회원 이름이 없으면 마지막에 출력(nulls last)
      */
 
     @Test
@@ -157,11 +156,12 @@ public class QuerydslBasicTest {
         assertThat(member5.getUsername(), is(equalTo("member5")));
         assertThat(member6.getUsername(), is(equalTo("member6")));
     }
+
     @Test
     public void paging1() { // 조회 건수 제한
         List<Member> result = queryFactory
                 .selectFrom(member)
-                .orderBy(member.username.desc()) .offset(1) //0부터 시작(zero index) .limit(2) //최대 2건 조회
+                .orderBy(member.username.desc()).offset(1) //0부터 시작(zero index) .limit(2) //최대 2건 조회
                 .fetch();
         assertThat(result.size(), is(equalTo(2)));
     }
@@ -181,12 +181,7 @@ public class QuerydslBasicTest {
     }
 
     /**
-     * JPQL
-     * select
-     * COUNT(m), //회원수
-     * SUM(m.age), //나이 합
-     * AVG(m.age), //평균 나이
-     * MAX(m.age), //최대 나이
+     * JPQL select COUNT(m), //회원수 SUM(m.age), //나이 합 AVG(m.age), //평균 나이 MAX(m.age), //최대 나이
      * MIN(m.age) //최소 나이 * from Member m
      */
     @Test
@@ -221,6 +216,64 @@ public class QuerydslBasicTest {
         assertThat(teamA.get(member.age.avg()), is(equalTo(15)));
         assertThat(teamB.get(team.name), is(equalTo("teamB")));
         assertThat(teamB.get(member.age.avg()), is(equalTo((35))));
+    }
+
+    /**
+     * 팀A에 소속된 모든 회원
+     */
+    @Test
+    public void join() throws Exception {
+        QMember member = QMember.member;
+        QTeam team = QTeam.team;
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
+//        assertThat(result)
+//                .extracting("username")
+//                .containsExactly("member1", "member2");
+    }
+
+
+    @Test
+    public void theta_join() throws Exception {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        List<Member> result = queryFactory
+                .select(member)
+                .from(member, team)
+                .where(member.username.eq(team.name))
+                .fetch();
+//        assertThat(result)
+//                .extracting("username")
+//                .containsExactly("teamA", "teamB");
+    }
+
+    @Test
+    public void join_on_filtering() throws Exception {
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team).on(team.name.eq("teamA"))
+                .fetch();
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    @Test
+    public void join_on_no_relation() throws Exception {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name))
+                .fetch();
+        for (Tuple tuple : result) {
+            System.out.println("t=" + tuple);
+        }
     }
 }
 
