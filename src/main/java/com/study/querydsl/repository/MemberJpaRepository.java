@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 @Repository
 public class MemberJpaRepository {
