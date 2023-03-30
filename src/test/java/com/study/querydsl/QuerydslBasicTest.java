@@ -1,11 +1,12 @@
 package com.study.querydsl;
 
-import static com.querydsl.core.types.ExpressionUtils.as;
 import static com.study.querydsl.Entity.QMember.member;
 import static com.study.querydsl.Entity.QTeam.team;
+import static org.apache.logging.log4j.util.Strings.isEmpty;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.springframework.util.Assert.hasText;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
@@ -16,9 +17,12 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
+import com.study.querydsl.Entity.MemberSearchCondition;
 import com.study.querydsl.Entity.QTeam;
 import com.study.querydsl.Entity.dto.MemberDto;
+import com.study.querydsl.Entity.dto.MemberTeamDto;
 import com.study.querydsl.Entity.dto.QMemberDto;
+import com.study.querydsl.Entity.dto.QMemberTeamDto;
 import com.study.querydsl.Entity.dto.UserDto;
 import java.util.*;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -34,7 +38,6 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @Transactional
@@ -499,7 +502,7 @@ public class QuerydslBasicTest {
         QMember memberSub = new QMember("memberSub");
         List<UserDto> fetch = queryFactory
                 .select(Projections.fields(UserDto.class,
-                                member.username, member.age))
+                        member.username, member.age))
                 .from(member)
                 .fetch();
     }
@@ -512,6 +515,7 @@ public class QuerydslBasicTest {
                 .fetch();
 
     }
+
     @Test
     public void 동적쿼리_BooleanBuilder() throws Exception {
         String usernameParam = "member1";
@@ -519,6 +523,7 @@ public class QuerydslBasicTest {
         List<Member> result = searchMember1(usernameParam, ageParam);
         Assertions.assertThat(result.size()).isEqualTo(1);
     }
+
     private List<Member> searchMember1(String usernameCond, Integer ageCond) {
         BooleanBuilder builder = new BooleanBuilder();
         if (usernameCond != null) {
@@ -534,20 +539,24 @@ public class QuerydslBasicTest {
     }
 
     @Test
-    public void 동적쿼리_WhereParam() throws Exception { String usernameParam = "member1";
+    public void 동적쿼리_WhereParam() throws Exception {
+        String usernameParam = "member1";
         Integer ageParam = 10;
         List<Member> result = searchMember2(usernameParam, ageParam);
         Assertions.assertThat(result.size()).isEqualTo(1);
     }
+
     private List<Member> searchMember2(String usernameCond, Integer ageCond) {
         return queryFactory
                 .selectFrom(member)
                 .where(usernameEq(usernameCond), ageEq(ageCond))
                 .fetch();
     }
+
     private BooleanExpression usernameEq(String usernameCond) {
         return usernameCond != null ? member.username.eq(usernameCond) : null;
     }
+
     private BooleanExpression ageEq(Integer ageCond) {
         return ageCond != null ? member.age.eq(ageCond) : null;
     }
@@ -556,13 +565,14 @@ public class QuerydslBasicTest {
     public void bulkUpdate() {
         long count = queryFactory
                 .update(member)
-                .set(member.username, "비회원") .where(member.age.lt(28)) .execute();
+                .set(member.username, "비회원").where(member.age.lt(28)).execute();
 
         long count2 = queryFactory
                 .update(member)
                 .set(member.age, member.age.add(1))
                 .execute();
     }
+
     @Test
     public void bulkDelete() {
         long count = queryFactory
@@ -580,7 +590,7 @@ public class QuerydslBasicTest {
                 .from(member)
                 .fetch();
 
-        for(String s : result) {
+        for (String s : result) {
             System.out.println("s = " + s);
         }
     }
@@ -594,7 +604,7 @@ public class QuerydslBasicTest {
                 .from(member)
                 .fetch();
 
-        for(String s : result) {
+        for (String s : result) {
             System.out.println("s = " + s);
         }
     }
@@ -607,9 +617,71 @@ public class QuerydslBasicTest {
                 .where(member.username.eq(Expressions.stringTemplate("function('lower', {0})",
                         member.username))).fetch();
 
-        for(String s : result) {
+        for (String s : result) {
             System.out.println("s = " + s);
         }
     }
+
+    public List<Member> findAll_Querydsl() {
+        return queryFactory
+                .selectFrom(member).fetch();
+    }
+
+    public List<Member> findByUsername_Querydsl(String username) {
+        return queryFactory
+                .selectFrom(member)
+                .where(member.username.eq(username))
+                .fetch();
+    }
+
+    public List<MemberTeamDto> searchByBuilder(MemberSearchCondition condition) {
+        BooleanBuilder builder = new BooleanBuilder();
+//        if (hasText(condition.getUsername())) {
+//            builder.and(member.username.eq(condition.getUsername()));
+//        }
+//        if (hasText(condition.getTeamName())) {
+//            builder.and(team.name.eq(condition.getTeamName()));
+//        }
+        if (condition.getAgeGoe() != null) {
+            builder.and(member.age.goe(condition.getAgeGoe()));
+        }
+        if (condition.getAgeLoe() != null) {
+            builder.and(member.age.loe(condition.getAgeLoe()));
+        }
+        return queryFactory
+                .select(new QMemberTeamDto(
+                        member.id,
+                        member.username,
+                        member.age,
+                        team.id,
+                        team.name))
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(builder)
+                .fetch();
+    }
+
+    @Test
+    public void searchTest() {
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        em.persist(teamA);
+        em.persist(teamB);
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member2", 20, teamA);
+        Member member3 = new Member("member3", 30, teamB);
+        Member member4 = new Member("member4", 40, teamB);
+        em.persist(member1);
+        em.persist(member2);
+        em.persist(member3);
+        em.persist(member4);
+        MemberSearchCondition condition = new MemberSearchCondition();
+        condition.setAgeGoe(35);
+        condition.setAgeLoe(40);
+        condition.setTeamName("teamB");
+//        List<MemberTeamDto> result = memberJpaRepository.searchByBuilder(condition);
+//        assertThat(result).extracting("username").containsExactly("member4");
+    }
 }
+
 
